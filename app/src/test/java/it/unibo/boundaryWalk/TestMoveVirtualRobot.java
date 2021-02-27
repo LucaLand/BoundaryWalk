@@ -51,59 +51,6 @@ public class TestMoveVirtualRobot {
 
 
 
-    //@Test
-    public void testPlan3BoundaryWalk(){
-        int room[][];
-        int time = 300;
-        room = boundaryWalk(time, appl);
 
-    }
-
-    private static final int SUD = 0;
-    private static final int EST = 1;
-    private static final int NORD = 2;
-    private static final int OVEST = 3;
-
-    public int[][] boundaryWalk(int time, MoveVirtualRobot robot){
-        int room[][] = new int[200][200];
-
-        int direction = 0;
-        int r=1,c=1;
-        boolean moveFailed;
-        for(int i=0; i<4; i++) {
-            do {
-                moveFailed = robot.moveForward(time);
-                if(!moveFailed) {
-                    switch (direction) {
-                        case SUD:
-                            r++;
-                            break;
-                        case NORD:
-                            r--;
-                            break;
-                        case EST:
-                            c++;
-                            break;
-                        case OVEST:
-                            c--;
-                    }
-                    room[r][c] = 1;
-                }
-            }while(!moveFailed);
-            moveFailed = robot.moveLeft(200);
-            if(!moveFailed){
-                direction++;
-            }else
-                assertTrue(!moveFailed);
-        }
-        for(int i =0;i<10;i++){
-           for(int j=0; j<10; j++){
-               System.out.print(room[i][j]);
-           }
-           System.out.print("\n");
-        }
-
-        return room;
-    }
 
 }
