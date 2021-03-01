@@ -272,7 +272,8 @@ Test Plan will be like this:
 <ul>
 	<li><k2>Functional TestPlans</k2>: Verify that the sequence of results replied by the robot is correct. 
 		We must set a movement time that allows the robot to move his lenght (forward or back) and repeat the forward command as many times as he don't hit the wall,
-		then we have to check that the robot executes this cycle 4 times, and check his command move, and that the space he did is the same of the perimeter. We will use a Matrix representig the room.
+		then we have to check that the robot executes this cycle 4 times, and check his command move, and that the space he did is the same of the perimeter.
+		We can try to represent the room and track the robot path.
 		<ul> 
 			<li>The first movement command goes to "endmove: true";</li> 
 			<li>The movement command "endmove: false" detecting a collision;</li>
@@ -354,6 +355,7 @@ The software system should be made as independent as possible from the communica
 The designer could use some <a href="https://it.wikipedia.org/wiki/Design_pattern" target="web"><ks>design pattern</ks></a> 
 to make the application layer as <k> invariant </k> as possible with respect
 to the communication protocol, which could be selected in a <k> configuration phase </k> of the system.
+We can use a command Pattern? <kc>###</kc>
 </li>
 
 <li><h4>Testing</h4>
@@ -364,7 +366,7 @@ It is not enough to induce the robot to move;
 in the absence of cameras and / or special environmental sensors, one way to proceed is to <ks> <i> infer knowledge </i> </ks> by
 the commands sent and the responses obtained from WENV and <ks> explicitly represent </ks> that knowledge.
 <br/><br/>
-It is necessary to create within the application, a sort of <k> <i> 'mind map' </i> </k> capable of providing a model of the robot's actions,
+A possible strategy is to create within the application, a sort of <k> <i> 'mind map' </i> </k> capable of providing a model of the robot's actions,
 on which a testing program can 'reason' to carry out the verifications.
 <br/><br/>
 More specifically, given the information on how to use the robot, we can prefigure that the solution to the problem consists of the following algorithm:
@@ -393,20 +395,141 @@ related to commands <a href="VirtualRobot2021.html #cril" target="web">cril</a>:
 <br/>
 <h4>TESTPLAN (Modification of Test-Plan 3):</h4> 
 First set the <kc> time </kc> for the moves <ks> w, s </ks> in order to obtain movements of <k> robot-units </k>
-(the robot do a space pair to his lenght). We build a incremental <k> territory map </k> after each move populating a matrix in wich the robot starts from the A[0,0] facing south. 
+(the robot do a space pair to his lenght). We build a incremental <k> territory map </k> after each move populating a matrix in wich the robot starts from the HomeCell(supposed Left-Upper angle of teh room) position facing south. 
 This way you could know where the robot is after each command and then you could check the path taken and the distance traveled by the robot at the end of the application; 
 for example (<kc> 1 </kc> represents the 'cells' traveled by the robot):
 <pre>
-|r, 1, 1, 1, 1, 
+|1, 1, 1, 1, 1, 
 |1, 0, 0, 0, 1, 
 |1, 0, 0, 0, 1, 
 |1, 0, 0, 0, 1, 
-|1, 1, 1, 1, 1, X, 
-|X, 
+|1, 1, 1, 1, 1, 
 </pre>
 At the end the Submatrix B[1:n-1, 1:n,1] have to be populated by all zero, and counting the ones and multiplicating for the robot lenght we have to get the perimeter of the room.
 </li>
+<br/>
 
+<h4>Implemented TestPlan in JUnit:</h4>
+<pre style="font-family: 'Courier New', monospace; font-size:10pt;">
+public class TestPlan3PersonalizedBoundaryWalk {
+    private MoveVirtualRobot appl;
+
+    @Before
+    public void systemSetUp() {
+        System.out.println("TestMoveVirtualRobot | setUp: robot should be at HOME-DOWN ");
+        appl = new MoveVirtualRobot();
+    }
+
+    @After
+    public void  terminate() {
+        System.out.println("%%%  TestPlan1 |  terminates ");
+    }
+
+    @Test
+    public void testPlan3BoundaryWalk(){
+        //Dati del committente in metri
+        double lR = 2.4, lC = 2.4;
+        double perimetro = (lR*2)+(lC*2);
+        double RobotLen = 0.6;
+        double RobotSpeed = 0.2;
+        int time = (int) (100 * RobotLen/RobotSpeed);
+        int homePosR = 1, homePosC = 1; //Cella di partenza
+
+
+        //Start Test
+        int room[][];
+
+        room = boundaryWalk(time, appl, homePosR, homePosC);
+
+        for(int i =0;i<=lR/RobotLen+1+homePosR;i++){
+            for(int j=0; j<=lC/RobotLen+1+homePosC; j++){
+                System.out.print(room[i][j]);
+            }
+            System.out.print("\n");
+        }
+
+
+        int i=homePosR, j=homePosC, count=0;
+        while (room[i][j] == 1){
+            i++;
+            count++;
+        }
+        if(room[--i][++j]==0)
+            fail();
+        while(room[i][j]==1) {
+            j++;
+            count++;
+        }
+        if(room[--i][--j]==0)
+            fail();
+        while (room[i][j] == 1 && i>0) {
+            i--;
+            count++;
+        }
+        if (++i==homePosR) {
+            if (room[i][--j] == 0)
+                fail("Errore in angolo nord-est");
+        }else
+            fail("Robot oltre la riga di partenza!");
+
+        while (room[i][j] == 1 && j>0) {
+            j--;
+            count++;
+        }
+        if (++j!=homePosC)
+            fail("Errore Robot non tornato nel punto di partenza: Room["+i+","+j+"]");
+        else
+            count--;
+
+        System.out.print("D: "+ count*RobotLen +"m\tL: "+ perimetro+"m\n");
+        if((count*RobotLen) != perimetro)
+            fail("d!=p -> La distanza percorsa dal robot non corrisponde alla lunghezza perimetro!");
+    }
+
+    private static final int SUD = 0;
+    private static final int EST = 1;
+    private static final int NORD = 2;
+    private static final int OVEST = 3;
+
+    public int[][] boundaryWalk(int time, MoveVirtualRobot robot, int homeR, int homeC){
+        int room[][] = new int[200][200];
+
+        room[homeR][homeC] = 2;
+        int direction = 0;
+        int r=homeR,c=homeC;
+        boolean moveFailed;
+
+        for(int i=0; i<4; i++) {
+            do {
+                moveFailed = robot.moveForward(time);
+                if(!moveFailed) {
+                    switch (direction) {
+                        case SUD:
+                            r++;
+                            break;
+                        case NORD:
+                            r--;
+                            break;
+                        case EST:
+                            c++;
+                            break;
+                        case OVEST:
+                            c--;
+                    }
+                    room[r][c] = 1;
+                }
+            }while(!moveFailed);
+            moveFailed = robot.moveLeft(200);
+            if(!moveFailed){
+                direction++;
+            }else
+                assertTrue(!moveFailed);
+        }
+
+        return room;
+    }
+}
+</pre>
  
 
  
